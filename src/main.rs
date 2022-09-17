@@ -1,16 +1,36 @@
+pub mod identifier_finder;
+
+use crate::identifier_finder::find_identifier;
+
 use reqwest;
 use reqwest::Client;
 use serde_json::Value;
+use tokio;
 use std::env;
 use std::{thread, time};
-use tokio;
+use std::fs::read_to_string;
+
 
 static QUERY_FUNCTION_NAME_SIGNATURE: i32 = 1279121;
 static QUERY_CONTRACT_NAME: i32 = 1279874;
 static DUNE_API_KEY: &str = "<insert key here>";
 
+pub fn test_find_identifier() {
+    let source_code = read_to_string("examples/erc20.yul").unwrap();
+    match find_identifier(&source_code, 22) {
+        Ok(Some(identifier)) => match &identifier.location {
+            Some(location) => println!("Found '{}' at {}", &identifier, location),
+            None => println!("Found '{}'", &identifier),
+        },
+        Ok(None) => println!("Not found"),
+        Err(error) => println!("{}", error),
+    }
+}
+
 #[tokio::main]
 async fn main() {
+    test_find_identifier();
+
     println!("Starting...");
 
     let client = reqwest::Client::new();
