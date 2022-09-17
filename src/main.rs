@@ -1,12 +1,12 @@
 use reqwest;
 use reqwest::Client;
-use serde::de::Error;
 use serde_json::Value;
 use std::env;
 use std::{thread, time};
 use tokio;
 
 static QUERY_FUNCTION_NAME_SIGNATURE: i32 = 1279121;
+static QUERY_CONTRACT_NAME: i32 = 1279874;
 static DUNE_API_KEY: &str = "<insert key here>";
 
 #[tokio::main]
@@ -19,11 +19,18 @@ async fn main() {
 
     println!("Function signature: {}", function_signature);
 
+    let contract_address = "0xe592427a0aece92de3edee1f18e0157c05861564".to_owned();
+
+    println!("Contract Address:{}", contract_address);
+
     let function_name =
         get_function_name(&client, QUERY_FUNCTION_NAME_SIGNATURE, function_signature).await;
 
-    //let result = get_function_name(client);
     println!("Function name:      {}", function_name);
+
+    let contract_name = get_contract_name(&client, QUERY_CONTRACT_NAME, contract_address).await;
+
+    println!("Contract Name:   {}", contract_name);
 }
 
 async fn get_function_name(client: &Client, query_id: i32, function_signature: String) -> String {
@@ -36,11 +43,14 @@ async fn get_function_name(client: &Client, query_id: i32, function_signature: S
     .replace("function_signature", &function_signature);
 
     // Execute query
-    let query_execution = execute_query(&client, query_id, body).await;
+    let query_execution = match execute_query(&client, query_id, body).await {
+        Ok(it) => it,
+        Err(error) => return format!("{}", error),
+    };
 
     let query_execution_object: Value = match serde_json::from_str(query_execution.as_str()) {
         Ok(it) => it,
-        Err(_) => panic!("[Error]"),
+        Err(error) => return format!("{}", error),
     };
 
     let execution_id = &query_execution_object["execution_id"];
@@ -49,11 +59,14 @@ async fn get_function_name(client: &Client, query_id: i32, function_signature: S
     thread::sleep(time::Duration::from_secs(3));
 
     // Get query results
-    let query_results = get_query_results_text(&client, execution_id).await;
+    let query_results = match get_query_results_text(&client, execution_id).await {
+        Ok(it) => it,
+        Err(error) => return format!("{}", error),
+    };
 
     let query_results_object: Value = match serde_json::from_str(query_results.as_str()) {
         Ok(it) => it,
-        Err(_) => panic!("[Error]"),
+        Err(error) => return format!("{}", error),
     };
 
     let signature_name = query_results_object["result"]["rows"][0]["signature"].to_string();
@@ -61,7 +74,52 @@ async fn get_function_name(client: &Client, query_id: i32, function_signature: S
     signature_name
 }
 
-async fn execute_query(client: &Client, query_id: i32, body: String) -> String {
+async fn get_contract_name(client: &Client, query_id: i32, contract_address: String) -> String {
+    // TODO: (fix) figure out better way than "replace"
+    let body = r#"{
+        "query_parameters": {
+            "contract_address":"contract_address_string"
+        }
+      }"#
+    .replace("contract_address_string", &contract_address);
+
+    // Execute query
+    let query_execution = match execute_query(&client, query_id, body).await {
+        Ok(it) => it,
+        Err(error) => return format!("{}", error),
+    };
+
+    let query_execution_object: Value = match serde_json::from_str(query_execution.as_str()) {
+        Ok(it) => it,
+        Err(error) => return format!("{}", error),
+    };
+
+    let execution_id = &query_execution_object["execution_id"];
+
+    // Wait 3 sec till the query fetching completed
+    thread::sleep(time::Duration::from_secs(3));
+
+    // Get query results
+    let query_results = match get_query_results_text(&client, execution_id).await {
+        Ok(it) => it,
+        Err(error) => return format!("{}", error),
+    };
+
+    let query_results_object: Value = match serde_json::from_str(query_results.as_str()) {
+        Ok(it) => it,
+        Err(error) => return format!("{}", error),
+    };
+
+    let contract_name = query_results_object["result"]["rows"][0]["name"].to_string();
+
+    contract_name
+}
+
+async fn execute_query(
+    client: &Client,
+    query_id: i32,
+    body: String,
+) -> Result<String, reqwest::Error> {
     let query_url = format_query_url(query_id);
 
     let execution_result = client
@@ -69,29 +127,28 @@ async fn execute_query(client: &Client, query_id: i32, body: String) -> String {
         .header("x-dune-api-key", DUNE_API_KEY.clone())
         .body(body)
         .send()
-        .await
-        .unwrap()
+        .await?
         .text()
-        .await
-        .unwrap();
+        .await?;
 
-    execution_result
+    Ok(execution_result)
 }
 
-async fn get_query_results_text(client: &Client, execution_id: &Value) -> String {
+async fn get_query_results_text(
+    client: &Client,
+    execution_id: &Value,
+) -> Result<String, reqwest::Error> {
     let execute_url = format_exection_url(execution_id);
 
     let execution_result = client
         .get(execute_url)
         .header("x-dune-api-key", DUNE_API_KEY.clone())
         .send()
-        .await
-        .unwrap()
+        .await?
         .text()
-        .await
-        .unwrap();
+        .await?;
 
-    execution_result
+    Ok(execution_result)
 }
 
 // async fn get_query_results_json(client: &Client, execution_id: &Value) -> Result<Value, reqwest::Error> {
