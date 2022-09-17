@@ -1,5 +1,6 @@
 use reqwest;
 use reqwest::Client;
+use serde::de::Error;
 use serde_json::Value;
 use std::env;
 use std::{thread, time};
@@ -16,13 +17,13 @@ async fn main() {
 
     let function_signature = "0x70a08231".to_owned();
 
-    println!("Function signature: {:?}", function_signature);
+    println!("Function signature: {}", function_signature);
 
     let function_name =
         get_function_name(&client, QUERY_FUNCTION_NAME_SIGNATURE, function_signature).await;
 
     //let result = get_function_name(client);
-    println!("Function name {:?}", function_name);
+    println!("Function name:      {}", function_name);
 }
 
 async fn get_function_name(client: &Client, query_id: i32, function_signature: String) -> String {
@@ -48,7 +49,7 @@ async fn get_function_name(client: &Client, query_id: i32, function_signature: S
     thread::sleep(time::Duration::from_secs(3));
 
     // Get query results
-    let query_results = get_query_results(&client, execution_id).await;
+    let query_results = get_query_results_text(&client, execution_id).await;
 
     let query_results_object: Value = match serde_json::from_str(query_results.as_str()) {
         Ok(it) => it,
@@ -77,7 +78,7 @@ async fn execute_query(client: &Client, query_id: i32, body: String) -> String {
     execution_result
 }
 
-async fn get_query_results(client: &Client, execution_id: &Value) -> String {
+async fn get_query_results_text(client: &Client, execution_id: &Value) -> String {
     let execute_url = format_exection_url(execution_id);
 
     let execution_result = client
@@ -92,6 +93,22 @@ async fn get_query_results(client: &Client, execution_id: &Value) -> String {
 
     execution_result
 }
+
+// async fn get_query_results_json(client: &Client, execution_id: &Value) -> Result<Value, reqwest::Error> {
+//     let execute_url = format_exection_url(execution_id);
+
+//     let execution_result = client
+//         .get(execute_url)
+//         .header("x-dune-api-key", DUNE_API_KEY.clone())
+//         .send()
+//         .await?
+//         .json::<serde_json::Value>()
+//         .await?;
+
+//     println!("execution_result {}", execution_result["result"]["rows"][0]["signature"]);
+
+//     Ok(execution_result["result"]["rows"][0]["signature"].clone())
+// }
 
 fn format_query_url(query_id: i32) -> String {
     let query_url = format!("https://api.dune.com/api/v1/query/{}/execute", query_id);
