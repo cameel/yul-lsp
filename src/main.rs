@@ -4,6 +4,7 @@ mod dune_apis;
 
 use crate::dune_apis::*;
 use crate::identifier_finder::find_identifier;
+use yultsur::yul_parser::parse_block;
 
 use reqwest::Client;
 use std::fs::read_to_string;
@@ -11,9 +12,11 @@ use tokio;
 
 #[tokio::main]
 async fn main() {
+    test_find_identifier(100);
+
     println!("Starting...");
     println!("- Testing find identifier...");
-    test_find_identifier();
+    test_find_identifier(100);
     let client = reqwest::Client::new();
     println!("- Testing get function name...");
     test_get_function_name(&client).await;
@@ -21,14 +24,26 @@ async fn main() {
     test_get_contract_name(&client).await;
 }
 
-pub fn test_find_identifier() {
+pub fn test_find_identifier(cursor_position: usize) {
     let source_code = read_to_string("examples/erc20.yul").unwrap();
-    match find_identifier(&source_code, 22) {
-        Ok(Some(identifier)) => match &identifier.location {
-            Some(location) => println!("Found '{}' at {}", &identifier, location),
-            None => println!("Found '{}'", &identifier),
+    match parse_block(&source_code) {
+        Ok(mut ast) => {
+            match find_identifier(&ast, cursor_position) {
+                Some(reference) => {
+                    match &reference.location {
+                        Some(location) => {
+                            println!("Reference to '{}' at {}.", &reference, location)
+                        }
+                        None => println!("Reference to '{}'.", &reference),
+                    };
+                }
+                None => println!("Not found"),
+            };
+        }
+        Err(error) => println!("{}", error),
+    }
+}
         },
-        Ok(None) => println!("Not found"),
         Err(error) => println!("{}", error),
     }
 }
