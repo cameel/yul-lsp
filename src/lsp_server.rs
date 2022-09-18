@@ -55,16 +55,25 @@ impl LanguageServer for Backend {
                 match identifier.location {
                     None => Ok(None),
                     Some(location) => {
+                        let start_line = rope.try_byte_to_line(location.start).unwrap();
+                        let end_line = rope.try_byte_to_line(location.end).unwrap();
+                        let start_index = location.start as u32 - rope.try_line_to_byte(start_line).unwrap() as u32;
+                        let end_index = location.end as u32 - rope.try_line_to_byte(end_line).unwrap() as u32;
+                        let start_char = end_index - start_index;
+                        let end_char = start_char;
                         let range = Range::new(
                             Position::new(
-                                rope.try_byte_to_line(location.start).unwrap() as u32,
-                                rope.try_byte_to_char(location.start).unwrap() as u32,
+                                start_line as u32,
+                                start_char
                             ),
                             Position::new(
-                                rope.try_byte_to_line(location.end).unwrap() as u32,
-                                rope.try_byte_to_char(location.end).unwrap() as u32,
+                                end_line as u32,
+                                end_char
                             ),
                         );
+
+                        let msg = format!("byte offset: {:?}\nrange: {:?}", byte_offset, range);
+                        self.client.log_message(MessageType::INFO, msg).await;
 
                         Ok(Some(GotoDefinitionResponse::Scalar(Location::new(uri, range))))
                     }
@@ -72,15 +81,6 @@ impl LanguageServer for Backend {
             Ok(None) => Ok(None),
             Err(_) => return Err(Error::new(ErrorCode::InvalidParams))
         }
-
-
-    /*    let start_position = Position::new(9 as u32, 3 as u32);
-        let end_position = Position::new(9 as u32, 9 as u32);
-        let range = Range::new(start_position, end_position);
-
-        let definition = Some(GotoDefinitionResponse::Scalar(Location::new(uri, range)));
-
-        return Ok(definition)*/
     }
 
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
