@@ -1,5 +1,6 @@
 pub mod definition_finder;
 pub mod identifier_finder;
+pub mod literal_finder;
 
 mod dune_apis;
 mod lsp_server;
