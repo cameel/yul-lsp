@@ -31,10 +31,11 @@ pub async fn get_function_name(
         return Err(format!("{}", error));
     }
 
-    let query_execution_object: Value = match serde_json::from_str(query_execution.unwrap().as_str()) {
-        Ok(it) => it,
-        Err(error) => return Err(format!("{}", error)),
-    };
+    let query_execution_object: Value =
+        match serde_json::from_str(query_execution.unwrap().as_str()) {
+            Ok(it) => it,
+            Err(error) => return Err(format!("{}", error)),
+        };
 
     let execution_id = &query_execution_object["execution_id"];
 
