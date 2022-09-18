@@ -1,9 +1,11 @@
+use crate::literal_finder::{find_literal, LiteralKind};
 use dashmap::DashMap;
 use ropey::Rope;
 use tower_lsp::jsonrpc::{Result, ErrorCode, Error};
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer};
 use crate::definition_finder::find_definition;
+use yultsur::yul_parser::parse_block;
 
 #[derive(Debug)]
 pub struct Backend {
@@ -21,6 +23,7 @@ impl LanguageServer for Backend {
                     TextDocumentSyncKind::FULL,
                 )),
                 definition_provider: Some(OneOf::Left(true)),
+                hover_provider: Some(HoverProviderCapability::Simple(true)),
                 ..ServerCapabilities::default()
             },
         })
@@ -34,6 +37,44 @@ impl LanguageServer for Backend {
 
     async fn shutdown(&self) -> Result<()> {
         Ok(())
+    }
+
+    async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
+        self.client.log_message(MessageType::INFO, "hover").await;
+
+        let uri = params
+            .text_document_position_params
+            .text_document
+            .uri
+            .clone();
+        let rope = self.document_map.get(&uri.to_string()).unwrap();
+
+        let position = params.text_document_position_params.position;
+        let byte_start = rope.try_line_to_byte(position.line as usize).unwrap();
+        let byte_end = rope.try_char_to_byte(position.character as usize).unwrap();
+        let byte_offset = byte_start + byte_end as usize;
+        let source = rope.to_string();
+        match parse_block(&source) {
+            Err(_) => Err(Error::new(ErrorCode::ParseError)),
+            Ok(ast) => {
+                if let Some(_literal) = find_literal(&ast, byte_offset, LiteralKind::Selector) {
+                    let tooltip = "selector";
+                    Ok(Some(Hover {
+                        contents: HoverContents::Scalar(MarkedString::String(tooltip.to_string())),
+                        range: None,
+                    }))
+                } else if let Some(_literal) = find_literal(&ast, byte_offset, LiteralKind::Address)
+                {
+                    let tooltip = "address";
+                    Ok(Some(Hover {
+                        contents: HoverContents::Scalar(MarkedString::String(tooltip.to_string())),
+                        range: None,
+                    }))
+                } else {
+                    Ok(None)
+                }
+            }
+        }
     }
 
     async fn goto_definition(
