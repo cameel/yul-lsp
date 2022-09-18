@@ -1,5 +1,3 @@
-extern crate dotenv;
-
 use lazy_static::lazy_static;
 use reqwest::Client;
 use reqwest::{self};
