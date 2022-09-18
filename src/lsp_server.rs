@@ -1,4 +1,5 @@
 use crate::definition_finder::find_definition;
+use crate::dune_apis::{QUERY_FUNCTION_NAME_SIGNATURE, get_function_name};
 use crate::literal_finder::{find_literal, LiteralKind};
 use dashmap::DashMap;
 use ropey::Rope;
@@ -57,15 +58,31 @@ impl LanguageServer for Backend {
         match parse_block(&source) {
             Err(_) => Err(Error::new(ErrorCode::ParseError)),
             Ok(ast) => {
-                if let Some(_literal) = find_literal(&ast, byte_offset, LiteralKind::Selector) {
-                    let tooltip = "selector";
-                    Ok(Some(Hover {
-                        contents: HoverContents::Scalar(MarkedString::String(tooltip.to_string())),
-                        range: None,
-                    }))
+                if let Some(literal) = find_literal(&ast, byte_offset, LiteralKind::Selector) {
+                    self.client
+                        .log_message(MessageType::ERROR, "Hovering over a selector. Querying Dune API.")
+                        .await;
+
+                    let reqwest_client = reqwest::Client::new();
+                    match get_function_name(&reqwest_client, QUERY_FUNCTION_NAME_SIGNATURE, literal.literal).await {
+                        Err(message) => {
+                            self.client
+                                .log_message(MessageType::ERROR, format!("Server error: {}", message))
+                                .await;
+                            Err(Error::new(ErrorCode::ServerError(1)))
+                        }
+                        Ok(signature) => {
+                            let tooltip = format!("**Signature**: {}", signature);
+
+                            Ok(Some(Hover {
+                                contents: HoverContents::Scalar(MarkedString::String(tooltip.to_string())),
+                                range: None,
+                            }))
+                        }
+                    }
                 } else if let Some(_literal) = find_literal(&ast, byte_offset, LiteralKind::Address)
                 {
-                    let tooltip = "address";
+                    let tooltip = "address (**TODO**: Dune query)";
                     Ok(Some(Hover {
                         contents: HoverContents::Scalar(MarkedString::String(tooltip.to_string())),
                         range: None,
