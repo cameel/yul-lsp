@@ -1,7 +1,9 @@
+pub mod definition_finder;
 pub mod identifier_finder;
 
 mod dune_apis;
 
+use crate::definition_finder::find_definition;
 use crate::dune_apis::*;
 use crate::identifier_finder::find_identifier;
 use yultsur::dialect::EVMDialect;
@@ -15,11 +17,10 @@ use tokio;
 
 #[tokio::main]
 async fn main() {
-    test_find_identifier(100);
-
     println!("Starting...");
     println!("- Testing find identifier...");
     test_find_identifier(100);
+    test_find_definition(100);
     let client = reqwest::Client::new();
     println!("- Testing get function name...");
     test_get_function_name(&client).await;
@@ -61,7 +62,15 @@ pub fn test_find_identifier(cursor_position: usize) {
         Err(error) => println!("{}", error),
     }
 }
+
+pub fn test_find_definition(cursor_position: usize) {
+    let source_code = read_to_string("examples/erc20.yul").unwrap();
+    match find_definition(&source_code, cursor_position) {
+        Ok(Some(definition)) => match &definition.location {
+            Some(location) => println!("Definition of '{}' found at {}.", &definition, location),
+            None => println!("Definition of '{}' found.", &definition),
         },
+        Ok(None) => println!("Definition not found"),
         Err(error) => println!("{}", error),
     }
 }
