@@ -13,9 +13,9 @@ use yultsur::resolver::resolve;
 use yultsur::yul::IdentifierID;
 use yultsur::yul_parser::parse_block;
 
+use crate::lsp_server::Backend;
 use dashmap::DashMap;
 use tower_lsp::{LspService, Server};
-use crate::lsp_server::Backend;
 
 use reqwest::Client;
 use std::fs::read_to_string;
@@ -34,7 +34,6 @@ async fn main() {
     test_get_function_name(&client).await;
     println!("- Testing get contract name...");
     test_get_contract_name(&client).await;*/
-
 
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();

@@ -1,10 +1,10 @@
+use crate::definition_finder::find_definition;
 use crate::literal_finder::{find_literal, LiteralKind};
 use dashmap::DashMap;
 use ropey::Rope;
-use tower_lsp::jsonrpc::{Result, ErrorCode, Error};
+use tower_lsp::jsonrpc::{Error, ErrorCode, Result};
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer};
-use crate::definition_finder::find_definition;
 use yultsur::yul_parser::parse_block;
 
 #[derive(Debug)]
@@ -81,8 +81,11 @@ impl LanguageServer for Backend {
         &self,
         params: GotoDefinitionParams,
     ) -> Result<Option<GotoDefinitionResponse>> {
-
-        let uri = params.text_document_position_params.text_document.uri.clone();
+        let uri = params
+            .text_document_position_params
+            .text_document
+            .uri
+            .clone();
         let rope = self.document_map.get(&uri.to_string()).unwrap();
 
         let position = params.text_document_position_params.position;
@@ -92,35 +95,32 @@ impl LanguageServer for Backend {
         let source = rope.to_string();
 
         match find_definition(&source, byte_offset) {
-            Ok(Some(identifier)) =>
-                match identifier.location {
-                    None => Ok(None),
-                    Some(location) => {
-                        let start_line = rope.try_byte_to_line(location.start).unwrap();
-                        let end_line = rope.try_byte_to_line(location.end).unwrap();
-                        let start_index = location.start as u32 - rope.try_line_to_byte(start_line).unwrap() as u32;
-                        let end_index = location.end as u32 - rope.try_line_to_byte(end_line).unwrap() as u32;
-                        let start_char = end_index - start_index;
-                        let end_char = start_char;
-                        let range = Range::new(
-                            Position::new(
-                                start_line as u32,
-                                start_char
-                            ),
-                            Position::new(
-                                end_line as u32,
-                                end_char
-                            ),
-                        );
+            Ok(Some(identifier)) => match identifier.location {
+                None => Ok(None),
+                Some(location) => {
+                    let start_line = rope.try_byte_to_line(location.start).unwrap();
+                    let end_line = rope.try_byte_to_line(location.end).unwrap();
+                    let start_index =
+                        location.start as u32 - rope.try_line_to_byte(start_line).unwrap() as u32;
+                    let end_index =
+                        location.end as u32 - rope.try_line_to_byte(end_line).unwrap() as u32;
+                    let start_char = end_index - start_index;
+                    let end_char = start_char;
+                    let range = Range::new(
+                        Position::new(start_line as u32, start_char),
+                        Position::new(end_line as u32, end_char),
+                    );
 
-                        let msg = format!("byte offset: {:?}\nrange: {:?}", byte_offset, range);
-                        self.client.log_message(MessageType::INFO, msg).await;
+                    let msg = format!("byte offset: {:?}\nrange: {:?}", byte_offset, range);
+                    self.client.log_message(MessageType::INFO, msg).await;
 
-                        Ok(Some(GotoDefinitionResponse::Scalar(Location::new(uri, range))))
-                    }
+                    Ok(Some(GotoDefinitionResponse::Scalar(Location::new(
+                        uri, range,
+                    ))))
                 }
+            },
             Ok(None) => Ok(None),
-            Err(_) => return Err(Error::new(ErrorCode::InvalidParams))
+            Err(_) => return Err(Error::new(ErrorCode::InvalidParams)),
         }
     }
 
@@ -156,7 +156,8 @@ impl LanguageServer for Backend {
             .log_message(MessageType::INFO, "file closed!")
             .await;
 
-        self.document_map.remove(&params.text_document.uri.to_string());
+        self.document_map
+            .remove(&params.text_document.uri.to_string());
     }
 }
 
