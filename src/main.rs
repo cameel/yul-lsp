@@ -2,6 +2,7 @@ pub mod definition_finder;
 pub mod identifier_finder;
 
 mod dune_apis;
+mod lsp_server;
 
 use crate::definition_finder::find_definition;
 use crate::dune_apis::*;
@@ -11,13 +12,19 @@ use yultsur::resolver::resolve;
 use yultsur::yul::IdentifierID;
 use yultsur::yul_parser::parse_block;
 
+use dashmap::DashMap;
+use tower_lsp::{LspService, Server};
+use crate::lsp_server::Backend;
+
 use reqwest::Client;
 use std::fs::read_to_string;
 use tokio;
 
 #[tokio::main]
 async fn main() {
-    println!("Starting...");
+    env_logger::init();
+
+    /*println!("Starting...");
     println!("- Testing find identifier...");
     test_find_identifier(100);
     test_find_definition(100);
@@ -25,7 +32,18 @@ async fn main() {
     println!("- Testing get function name...");
     test_get_function_name(&client).await;
     println!("- Testing get contract name...");
-    test_get_contract_name(&client).await;
+    test_get_contract_name(&client).await;*/
+
+
+    let stdin = tokio::io::stdin();
+    let stdout = tokio::io::stdout();
+
+    let (service, socket) = LspService::build(|client| Backend {
+        client,
+        document_map: DashMap::new(),
+    })
+    .finish();
+    Server::new(stdin, stdout, socket).serve(service).await;
 }
 
 pub fn test_find_identifier(cursor_position: usize) {
