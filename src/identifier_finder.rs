@@ -20,7 +20,7 @@ impl ASTVisitor for IdentifierFinder {
         if let Some(location) = &identifier.location {
             if location.start <= self.cursor_location && self.cursor_location < location.end {
                 // Identifiers cannot overlap
-                assert!(self.found_identifier == None);
+                assert!(self.found_identifier.is_none());
 
                 self.found_identifier = Some(identifier.clone())
             }
@@ -30,7 +30,7 @@ impl ASTVisitor for IdentifierFinder {
 
 pub fn find_identifier(ast: &Block, cursor_position: usize) -> Option<Identifier> {
     let mut identifier_finder = IdentifierFinder::new(cursor_position);
-    identifier_finder.visit_block(&ast);
+    identifier_finder.visit_block(ast);
     identifier_finder.found_identifier
 }
 

@@ -17,7 +17,6 @@ use dashmap::DashMap;
 use tower_lsp::{LspService, Server};
 
 use std::fs::read_to_string;
-use tokio;
 
 #[tokio::main]
 async fn main() {

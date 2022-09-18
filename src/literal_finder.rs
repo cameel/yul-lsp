@@ -1,7 +1,7 @@
 use yultsur::visitor::ASTVisitor;
-use yultsur::yul::{Block, Literal};
+use yultsur::yul::{Block, Literal, SourceLocation};
 
-#[derive(Hash, Clone, PartialEq, Debug)]
+#[derive(Hash, Clone, PartialEq, Eq, Debug)]
 pub enum LiteralKind {
     Selector,
     Address,
@@ -20,20 +20,23 @@ impl LiteralFinder {
             found_literal: None,
         }
     }
+
+    pub fn between(&self, location: &SourceLocation) -> bool {
+        location.start <= self.cursor_location && self.cursor_location < location.end
+    }
 }
 
 impl ASTVisitor for LiteralFinder {
     fn visit_literal(&mut self, literal: &Literal) {
         if let Some(location) = &literal.location {
-            if location.start <= self.cursor_location && self.cursor_location < location.end {
-                if
-                // TODO: More strict heuristics
-                self.literal_kind == LiteralKind::Selector && literal.literal.len() == 10
-                    || self.literal_kind == LiteralKind::Address && literal.literal.len() == 42
-                {
-                    assert!(self.found_literal == None);
-                    self.found_literal = Some(literal.clone());
-                }
+            // TODO: More strict heuristics
+            if self.between(location)
+                && self.literal_kind == LiteralKind::Selector
+                && literal.literal.len() == 10
+                || self.literal_kind == LiteralKind::Address && literal.literal.len() == 42
+            {
+                assert!(self.found_literal.is_none());
+                self.found_literal = Some(literal.clone());
             }
         }
     }
@@ -45,6 +48,6 @@ pub fn find_literal(
     literal_kind: LiteralKind,
 ) -> Option<Literal> {
     let mut literal_finder = LiteralFinder::new(cursor_position, literal_kind);
-    literal_finder.visit_block(&ast);
+    literal_finder.visit_block(ast);
     literal_finder.found_literal
 }
