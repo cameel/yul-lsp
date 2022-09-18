@@ -4,6 +4,9 @@ mod dune_apis;
 
 use crate::dune_apis::*;
 use crate::identifier_finder::find_identifier;
+use yultsur::dialect::EVMDialect;
+use yultsur::resolver::resolve;
+use yultsur::yul::IdentifierID;
 use yultsur::yul_parser::parse_block;
 
 use reqwest::Client;
@@ -28,6 +31,8 @@ pub fn test_find_identifier(cursor_position: usize) {
     let source_code = read_to_string("examples/erc20.yul").unwrap();
     match parse_block(&source_code) {
         Ok(mut ast) => {
+            resolve::<EVMDialect>(&mut ast);
+
             match find_identifier(&ast, cursor_position) {
                 Some(reference) => {
                     match &reference.location {
@@ -35,6 +40,19 @@ pub fn test_find_identifier(cursor_position: usize) {
                             println!("Reference to '{}' at {}.", &reference, location)
                         }
                         None => println!("Reference to '{}'.", &reference),
+                    };
+
+                    match reference.id {
+                        IdentifierID::Declaration(id) => {
+                            println!("The identifier is a definition (id: {}).", id)
+                        }
+                        IdentifierID::Reference(id) => {
+                            println!("The identifier is a reference (id: {}).", id)
+                        }
+                        IdentifierID::BuiltinReference => println!("The identifier is a built-in."),
+                        IdentifierID::UnresolvedReference => {
+                            println!("The identifier has not been resolved yet.")
+                        }
                     };
                 }
                 None => println!("Not found"),
