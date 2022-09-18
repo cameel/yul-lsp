@@ -162,8 +162,8 @@ fn format_exection_url(execution_id: &Value) -> String {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_get_function_name() {
+    #[tokio::test]
+    async fn test_get_function_name() {
         let client = reqwest::Client::new();
         let function_signature = "0x70a08231".to_owned();
         println!("Function signature: {}", function_signature);
@@ -174,8 +174,8 @@ mod tests {
         assert_eq!(function_name, "balanceOf(address)");
     }
 
-    #[test]
-    fn test_get_contract_name() {
+    #[tokio::test]
+    async fn test_get_contract_name() {
         let client = reqwest::Client::new();
         let contract_address = "0xe592427a0aece92de3edee1f18e0157c05861564".to_owned();
         println!("Contract Address:{}", contract_address);
