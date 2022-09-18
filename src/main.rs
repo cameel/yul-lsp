@@ -1,12 +1,11 @@
 pub mod definition_finder;
 pub mod identifier_finder;
 pub mod literal_finder;
+pub mod dune_apis;
 
-mod dune_apis;
 mod lsp_server;
 
 use crate::definition_finder::find_definition;
-use crate::dune_apis::*;
 use crate::identifier_finder::find_identifier;
 use yultsur::dialect::EVMDialect;
 use yultsur::resolver::resolve;
@@ -17,23 +16,12 @@ use crate::lsp_server::Backend;
 use dashmap::DashMap;
 use tower_lsp::{LspService, Server};
 
-use reqwest::Client;
 use std::fs::read_to_string;
 use tokio;
 
 #[tokio::main]
 async fn main() {
     env_logger::init();
-
-    /*println!("Starting...");
-    println!("- Testing find identifier...");
-    test_find_identifier(100);
-    test_find_definition(100);
-    let client = reqwest::Client::new();
-    println!("- Testing get function name...");
-    test_get_function_name(&client).await;
-    println!("- Testing get contract name...");
-    test_get_contract_name(&client).await;*/
 
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
@@ -91,19 +79,4 @@ pub fn test_find_definition(cursor_position: usize) {
         Ok(None) => println!("Definition not found"),
         Err(error) => println!("{}", error),
     }
-}
-
-pub async fn test_get_function_name(client: &Client) {
-    let function_signature = "0x70a08231".to_owned();
-    println!("Function signature: {}", function_signature);
-    let function_name =
-        get_function_name(&client, QUERY_FUNCTION_NAME_SIGNATURE, function_signature).await;
-    println!("Function name:      {}", function_name);
-}
-
-pub async fn test_get_contract_name(client: &Client) {
-    let contract_address = "0xe592427a0aece92de3edee1f18e0157c05861564".to_owned();
-    println!("Contract Address:{}", contract_address);
-    let contract_name = get_contract_name(&client, QUERY_CONTRACT_NAME, contract_address).await;
-    println!("Contract Name:   {}", contract_name);
 }

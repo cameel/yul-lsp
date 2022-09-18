@@ -16,7 +16,7 @@ pub async fn get_function_name(
     client: &Client,
     query_id: i32,
     function_signature: String,
-) -> String {
+) -> Result<String, String> {
     // TODO: (fix) figure out better way than "replace"
     let body = r#"{
         "query_parameters": {
@@ -26,14 +26,14 @@ pub async fn get_function_name(
     .replace("function_signature", &function_signature);
 
     // Execute query
-    let query_execution = match execute_query(&client, query_id, body).await {
-        Ok(it) => it,
-        Err(error) => return format!("{}", error),
-    };
+    let query_execution = execute_query(&client, query_id, body).await;
+    if let Err(error) = query_execution {
+        return Err(format!("{}", error));
+    }
 
-    let query_execution_object: Value = match serde_json::from_str(query_execution.as_str()) {
+    let query_execution_object: Value = match serde_json::from_str(query_execution.unwrap().as_str()) {
         Ok(it) => it,
-        Err(error) => return format!("{}", error),
+        Err(error) => return Err(format!("{}", error)),
     };
 
     let execution_id = &query_execution_object["execution_id"];
@@ -44,17 +44,15 @@ pub async fn get_function_name(
     // Get query results
     let query_results = match get_query_results_text(&client, execution_id).await {
         Ok(it) => it,
-        Err(error) => return format!("{}", error),
+        Err(error) => return Err(format!("{}", error)),
     };
 
     let query_results_object: Value = match serde_json::from_str(query_results.as_str()) {
         Ok(it) => it,
-        Err(error) => return format!("{}", error),
+        Err(error) => return Err(format!("{}", error)),
     };
 
-    let signature_name = query_results_object["result"]["rows"][0]["signature"].to_string();
-
-    signature_name
+    Ok(query_results_object["result"]["rows"][0]["signature"].to_string())
 }
 
 pub async fn get_contract_name(client: &Client, query_id: i32, contract_address: String) -> String {
