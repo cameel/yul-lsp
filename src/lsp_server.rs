@@ -3,6 +3,7 @@ use ropey::Rope;
 use tower_lsp::jsonrpc::{Result, ErrorCode, Error};
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer};
+use crate::definition_finder::find_definition;
 
 #[derive(Debug)]
 pub struct Backend {
@@ -49,19 +50,37 @@ impl LanguageServer for Backend {
         let byte_offset = byte_start + byte_end as usize;
         let source = rope.to_string();
 
-        /*match find_definition(source, byte_offset) {
+        match find_definition(&source, byte_offset) {
+            Ok(Some(identifier)) =>
+                match identifier.location {
+                    None => Ok(None),
+                    Some(location) => {
+                        let range = Range::new(
+                            Position::new(
+                                rope.try_byte_to_line(location.start).unwrap() as u32,
+                                rope.try_byte_to_char(location.start).unwrap() as u32,
+                            ),
+                            Position::new(
+                                rope.try_byte_to_line(location.end).unwrap() as u32,
+                                rope.try_byte_to_char(location.end).unwrap() as u32,
+                            ),
+                        );
 
-
+                        Ok(Some(GotoDefinitionResponse::Scalar(Location::new(uri, range))))
+                    }
+                }
+            Ok(None) => Ok(None),
+            Err(_) => return Err(Error::new(ErrorCode::InvalidParams))
         }
-        */
 
-        let start_position = Position::new(9 as u32, 3 as u32);
+
+    /*    let start_position = Position::new(9 as u32, 3 as u32);
         let end_position = Position::new(9 as u32, 9 as u32);
         let range = Range::new(start_position, end_position);
 
         let definition = Some(GotoDefinitionResponse::Scalar(Location::new(uri, range)));
 
-        return Ok(definition)
+        return Ok(definition)*/
     }
 
     async fn did_open(&self, params: DidOpenTextDocumentParams) {

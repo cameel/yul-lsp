@@ -24,7 +24,7 @@ use tokio;
 async fn main() {
     env_logger::init();
 
-    println!("Starting...");
+    /*println!("Starting...");
     println!("- Testing find identifier...");
     test_find_identifier(100);
     test_find_definition(100);
@@ -32,7 +32,7 @@ async fn main() {
     println!("- Testing get function name...");
     test_get_function_name(&client).await;
     println!("- Testing get contract name...");
-    test_get_contract_name(&client).await;
+    test_get_contract_name(&client).await;*/
 
 
     let stdin = tokio::io::stdin();
