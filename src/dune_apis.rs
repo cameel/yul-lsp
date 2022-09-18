@@ -1,11 +1,18 @@
-use reqwest;
+extern crate dotenv;
+
+use lazy_static::lazy_static;
 use reqwest::Client;
+use reqwest::{self};
 use serde_json::Value;
+use std::fs::read_to_string;
 use std::{thread, time};
 
 pub static QUERY_FUNCTION_NAME_SIGNATURE: i32 = 1279121;
 pub static QUERY_CONTRACT_NAME: i32 = 1279874;
-static DUNE_API_KEY: &str = "";
+
+lazy_static! {
+    static ref DUNE_API_KEY: String = get_dune_api_key().unwrap();
+}
 
 pub async fn get_function_name(
     client: &Client,
@@ -156,6 +163,15 @@ fn format_exection_url(execution_id: &Value) -> String {
     .replace('\"', "");
 
     execute_url
+}
+
+fn get_dune_api_key() -> Result<String, std::io::Error> {
+    let env_file = read_to_string(".env")
+        .unwrap()
+        .replace("DUNE_API_KEY=", "")
+        .replace("\"", "");
+
+    Ok(env_file)
 }
 
 #[cfg(test)]
