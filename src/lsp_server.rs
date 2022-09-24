@@ -164,6 +164,9 @@ impl LanguageServer for Backend {
 pub struct TextDocumentItem {
     uri: Url,
     text: String,
+    // FIXME: We should be using tower_lsp::lsp_types::TextDocumentItem here instead
+    // of shadowing it with our own struct.
+    #[allow(dead_code)]
     version: i32,
 }
 
