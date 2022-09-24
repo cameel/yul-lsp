@@ -142,30 +142,32 @@ fn get_dune_api_key() -> Result<String> {
 mod tests {
     use super::*;
 
-    #[tokio::test]
-    async fn test_get_function_name() -> Result<()> {
-        let client = reqwest::Client::new();
-        let function_signature = "0x70a08231".to_owned();
-        println!("Function signature: {}", function_signature);
-        let function_name =
-            get_function_name(&client, QUERY_FUNCTION_NAME_SIGNATURE, function_signature).await?;
-        println!("Function name:      {}", function_name);
-
-        assert_eq!(function_name, "balanceOf(address)");
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_get_contract_name() -> Result<()> {
-        let client = reqwest::Client::new();
-        let contract_address = "0xe592427a0aece92de3edee1f18e0157c05861564".to_owned();
-        println!("Contract Address:{}", contract_address);
-        let contract_name =
-            get_contract_name(&client, QUERY_CONTRACT_NAME, contract_address).await?;
-        println!("Contract Name:   {}", contract_name);
-
-        assert_eq!(contract_name, "SwapRouter");
-
-        Ok(())
-    }
+    // FIXME: These tests won't pass in CI without the API key.
+    // We need a key to a sandbox or tests that mock the API.
+    //#[tokio::test]
+    //async fn test_get_function_name() -> Result<()> {
+    //    let client = reqwest::Client::new();
+    //    let function_signature = "0x70a08231".to_owned();
+    //    println!("Function signature: {}", function_signature);
+    //    let function_name =
+    //        get_function_name(&client, QUERY_FUNCTION_NAME_SIGNATURE, function_signature).await?;
+    //    println!("Function name:      {}", function_name);
+    //
+    //    assert_eq!(function_name, "balanceOf(address)");
+    //    Ok(())
+    //}
+    //
+    //#[tokio::test]
+    //async fn test_get_contract_name() -> Result<()> {
+    //    let client = reqwest::Client::new();
+    //    let contract_address = "0xe592427a0aece92de3edee1f18e0157c05861564".to_owned();
+    //    println!("Contract Address:{}", contract_address);
+    //    let contract_name =
+    //        get_contract_name(&client, QUERY_CONTRACT_NAME, contract_address).await?;
+    //    println!("Contract Name:   {}", contract_name);
+    //
+    //    assert_eq!(contract_name, "SwapRouter");
+    //
+    //    Ok(())
+    //}
 }
