@@ -1,7 +1,7 @@
 pub mod definition_finder;
+pub mod dune_apis;
 pub mod identifier_finder;
 pub mod literal_finder;
-pub mod dune_apis;
 
 mod lsp_server;
 
@@ -17,7 +17,6 @@ use dashmap::DashMap;
 use tower_lsp::{LspService, Server};
 
 use std::fs::read_to_string;
-use tokio;
 
 #[tokio::main]
 async fn main() {

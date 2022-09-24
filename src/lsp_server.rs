@@ -170,7 +170,6 @@ pub struct TextDocumentItem {
 impl Backend {
     async fn on_change(&self, params: TextDocumentItem) {
         let rope = ropey::Rope::from_str(&params.text);
-        self.document_map
-            .insert(params.uri.to_string(), rope.clone());
+        self.document_map.insert(params.uri.to_string(), rope);
     }
 }

@@ -24,7 +24,7 @@ impl ASTVisitor for DefinitionFinder {
         if let IdentifierID::Declaration(id) = identifier.id {
             if id == self.reference_id {
                 // Identifier can have only one definition
-                assert!(self.found_identifier == None);
+                assert!(self.found_identifier.is_none());
 
                 self.found_identifier = Some(identifier.clone())
             }
@@ -36,7 +36,7 @@ pub fn find_definition(
     source_code: &str,
     cursor_position: usize,
 ) -> Result<Option<Identifier>, String> {
-    let mut ast = parse_block(&source_code)?;
+    let mut ast = parse_block(source_code)?;
     resolve::<EVMDialect>(&mut ast);
 
     if let Some(reference) = find_identifier(&ast, cursor_position) {

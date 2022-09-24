@@ -1,3 +1,4 @@
+use eyre::Result;
 use lazy_static::lazy_static;
 use reqwest::Client;
 use reqwest::{self};
@@ -16,7 +17,7 @@ pub async fn get_function_name(
     client: &Client,
     query_id: i32,
     function_signature: String,
-) -> Result<String, String> {
+) -> Result<String> {
     // TODO: (fix) figure out better way than "replace"
     let body = r#"{
         "query_parameters": {
@@ -26,15 +27,9 @@ pub async fn get_function_name(
     .replace("function_signature", &function_signature);
 
     // Execute query
-    let query_execution = execute_query(&client, query_id, body).await;
-    if let Err(error) = query_execution {
-        return Err(format!("{}", error));
-    }
+    let query_execution: String = execute_query(client, query_id, body).await?;
 
-    let query_execution_object: Value = match serde_json::from_str(query_execution.unwrap().as_str()) {
-        Ok(it) => it,
-        Err(error) => return Err(format!("{}", error)),
-    };
+    let query_execution_object: Value = query_execution.try_into()?;
 
     let execution_id = &query_execution_object["execution_id"];
 
@@ -42,20 +37,18 @@ pub async fn get_function_name(
     thread::sleep(time::Duration::from_secs(5));
 
     // Get query results
-    let query_results = match get_query_results_text(&client, execution_id).await {
-        Ok(it) => it,
-        Err(error) => return Err(format!("{}", error)),
-    };
+    let query_results = get_query_results_text(client, execution_id).await?;
 
-    let query_results_object: Value = match serde_json::from_str(query_results.as_str()) {
-        Ok(it) => it,
-        Err(error) => return Err(format!("{}", error)),
-    };
+    let query_results_object: Value = serde_json::from_str(query_results.as_str())?;
 
     Ok(query_results_object["result"]["rows"][0]["signature"].to_string())
 }
 
-pub async fn get_contract_name(client: &Client, query_id: i32, contract_address: String) -> String {
+pub async fn get_contract_name(
+    client: &Client,
+    query_id: i32,
+    contract_address: String,
+) -> Result<String> {
     // TODO: (fix) figure out better way than "replace"
     let body = r#"{
         "query_parameters": {
@@ -65,42 +58,22 @@ pub async fn get_contract_name(client: &Client, query_id: i32, contract_address:
     .replace("contract_address_string", &contract_address);
 
     // Execute query
-    let query_execution = match execute_query(&client, query_id, body).await {
-        Ok(it) => it,
-        Err(error) => return format!("{}", error),
-    };
+    let query_execution = execute_query(client, query_id, body).await?;
 
-    let query_execution_object: Value = match serde_json::from_str(query_execution.as_str()) {
-        Ok(it) => it,
-        Err(error) => return format!("{}", error),
-    };
-
+    let query_execution_object: Value = serde_json::from_str(query_execution.as_str())?;
     let execution_id = &query_execution_object["execution_id"];
 
     // Wait 3 sec till the query fetching completed
     thread::sleep(time::Duration::from_secs(5));
 
     // Get query results
-    let query_results = match get_query_results_text(&client, execution_id).await {
-        Ok(it) => it,
-        Err(error) => return format!("{}", error),
-    };
+    let query_results = get_query_results_text(client, execution_id).await?;
 
-    let query_results_object: Value = match serde_json::from_str(query_results.as_str()) {
-        Ok(it) => it,
-        Err(error) => return format!("{}", error),
-    };
-
-    let contract_name = query_results_object["result"]["rows"][0]["name"].to_string();
-
-    contract_name
+    let query_results_object: Value = serde_json::from_str(query_results.as_str())?;
+    Ok(query_results_object["result"]["rows"][0]["name"].to_string())
 }
 
-async fn execute_query(
-    client: &Client,
-    query_id: i32,
-    body: String,
-) -> Result<String, reqwest::Error> {
+async fn execute_query(client: &Client, query_id: i32, body: String) -> Result<String> {
     let query_url = format_query_url(query_id);
 
     let execution_result = client
@@ -115,10 +88,7 @@ async fn execute_query(
     Ok(execution_result)
 }
 
-async fn get_query_results_text(
-    client: &Client,
-    execution_id: &Value,
-) -> Result<String, reqwest::Error> {
+async fn get_query_results_text(client: &Client, execution_id: &Value) -> Result<String> {
     let execute_url = format_exection_url(execution_id);
 
     let execution_result = client
@@ -152,20 +122,18 @@ fn format_query_url(query_id: i32) -> String {
 
 fn format_exection_url(execution_id: &Value) -> String {
     // TODO: fix the replace
-    let execute_url = format!(
+    format!(
         "https://api.dune.com/api/v1/execution/{}/results",
         execution_id
     )
-    .replace('\"', "");
-
-    execute_url
+    .replace('\"', "")
 }
 
-fn get_dune_api_key() -> Result<String, std::io::Error> {
+fn get_dune_api_key() -> Result<String> {
     let env_file = read_to_string(".env")
         .unwrap()
         .replace("DUNE_API_KEY=", "")
-        .replace("\"", "");
+        .replace('\"', "");
 
     Ok(env_file)
 }
@@ -175,25 +143,29 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_get_function_name() {
+    async fn test_get_function_name() -> Result<()> {
         let client = reqwest::Client::new();
         let function_signature = "0x70a08231".to_owned();
         println!("Function signature: {}", function_signature);
         let function_name =
-            get_function_name(&client, QUERY_FUNCTION_NAME_SIGNATURE, function_signature).await;
+            get_function_name(&client, QUERY_FUNCTION_NAME_SIGNATURE, function_signature).await?;
         println!("Function name:      {}", function_name);
 
         assert_eq!(function_name, "balanceOf(address)");
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_get_contract_name() {
+    async fn test_get_contract_name() -> Result<()> {
         let client = reqwest::Client::new();
         let contract_address = "0xe592427a0aece92de3edee1f18e0157c05861564".to_owned();
         println!("Contract Address:{}", contract_address);
-        let contract_name = get_contract_name(&client, QUERY_CONTRACT_NAME, contract_address).await;
+        let contract_name =
+            get_contract_name(&client, QUERY_CONTRACT_NAME, contract_address).await?;
         println!("Contract Name:   {}", contract_name);
 
         assert_eq!(contract_name, "SwapRouter");
+
+        Ok(())
     }
 }
